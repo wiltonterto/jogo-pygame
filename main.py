@@ -1,14 +1,24 @@
 import pygame
 import random
 import cores
-import menu_inicial # Importa o novo módulo
+import menu_inicial 
+import config # Importa as configurações dinâmicas (TAMANHO_TABULEIRO, SOM_LIGADO)
 
-# --- Funções Auxiliares ---
+# --- Constantes de Configuração Geral ---
+LARGURA_TELA = 1050
+ALTURA_TELA = 840 
+LADO_CELULA = 100 # Tamanho base da célula (usado para 4x4, 6x6, 8x8)
+
+NUM_TESOUROS = 6 # Mantido constante
+NUM_BURACOS = 3 # Mantido constante
+
+# --- Funções Auxiliares (Sem Alterações) ---
 def inicializar_tabuleiro(linhas, colunas, num_tesouros, num_buracos):
     """
     Cria o tabuleiro do jogo, distribui os tesouros e buracos,
     e calcula os números das casas vizinhas.
     """
+    # ... (Seu código da função inicializar_tabuleiro permanece inalterado) ...
     tabuleiro = [[0 for _ in range(colunas)] for _ in range(linhas)]
 
     # Distribui os tesouros ('T') aleatoriamente
@@ -51,15 +61,17 @@ def inicializar_tabuleiro(linhas, colunas, num_tesouros, num_buracos):
     
     return tabuleiro
 
+
 def desenhar_tabuleiro(tela, tabuleiro_visivel, tabuleiro_solucao, lado_celula, 
-                      img_tesouro, img_buraco, img_celula_fechada, img_numeros):
+                      img_tesouro, img_buraco, img_celula_fechada, img_numeros, offset_x, offset_y):
     """
-    Desenha o estado atual do tabuleiro na tela.
+    Desenha o estado atual do tabuleiro na tela, aplicando o offset para centralização.
     """
     for linha in range(len(tabuleiro_visivel)):
         for coluna in range(len(tabuleiro_visivel[0])):
-            x = coluna * lado_celula
-            y = linha * lado_celula
+            # Posicionamento ajustado pelo offset
+            x = coluna * lado_celula + offset_x 
+            y = linha * lado_celula + offset_y
 
             if tabuleiro_visivel[linha][coluna]:
                 conteudo = tabuleiro_solucao[linha][coluna]
@@ -73,75 +85,107 @@ def desenhar_tabuleiro(tela, tabuleiro_visivel, tabuleiro_solucao, lado_celula,
                         tela.blit(img_numeros[conteudo], (x, y))
             else:
                 tela.blit(img_celula_fechada, (x, y))
-            
-            retangulo_celula = pygame.Rect(x, y, lado_celula, lado_celula)
-            pygame.draw.rect(tela, cores.branco, retangulo_celula, 1)
+            # O desenho da borda da célula foi removido para usar o visual do fundo
+
+
+def desenhar_texto_centralizado(tela, texto, fonte, cor, centro_x, centro_y):
+    """Função auxiliar para desenhar texto de forma simplificada."""
+    texto_render = fonte.render(texto, True, cor)
+    retangulo_texto = texto_render.get_rect(center=(centro_x, centro_y))
+    tela.blit(texto_render, retangulo_texto)
 
 
 # --- Função Principal ---
 
 def main():
     pygame.init()
-
-    # --- Constantes e Configurações ---
-    LADO_CELULA = 120
-    NUM_LINHAS = 4
-    NUM_COLUNAS = 4
+    pygame.mixer.init() # Garante que o som inicialize (para futuras implementações)
     
-    NUM_TESOUROS = 6
-    NUM_BURACOS = 3
-
-    largura_tela = NUM_COLUNAS * LADO_CELULA
-    altura_tela = (NUM_LINHAS + 1) * LADO_CELULA
-    tela = pygame.display.set_mode((largura_tela, altura_tela))
+    # --- 1. Inicialização da Tela ---
+    tela = pygame.display.set_mode((LARGURA_TELA, ALTURA_TELA))
     pygame.display.set_caption("Caça ao Tesouro")
-
-    # Fontes
-    fonte_titulo = pygame.font.SysFont("Arial", 60, bold=True)
-    fonte_botoes = pygame.font.SysFont("Arial", 30)
-    fonte_placar = pygame.font.SysFont("Arial", 24)
     
-    # --- Chamada da tela de menu ---
-    modo_jogo = menu_inicial.tela_de_menu(tela, largura_tela, altura_tela, fonte_titulo, fonte_botoes)
+    # --- 2. Carregamento de Fontes ---
+    CAMINHO_FONTE = 'recursos/stitch.ttf' 
+    FONTE_FALLBACK = "Arial" 
 
-    if modo_jogo is None:
+    try:
+        fonte_titulo = pygame.font.Font(CAMINHO_FONTE, 60)
+        fonte_botoes = pygame.font.Font(CAMINHO_FONTE, 30)
+        fonte_placar = pygame.font.Font(CAMINHO_FONTE, 24)
+    except (FileNotFoundError, pygame.error):
+        fonte_titulo = pygame.font.SysFont(FONTE_FALLBACK, 60, bold=True)
+        fonte_botoes = pygame.font.SysFont(FONTE_FALLBACK, 30)
+        fonte_placar = pygame.font.SysFont(FONTE_FALLBACK, 24)
+    
+    # --- 3. Carregamento de Imagens de Fundo (Menu e Ajustes) ---
+    IMG_FUNDO_MENU = None
+    IMG_FUNDO_AJUSTES = None
+    IMG_FUNDO_JOGO = None # <-- NOVO
+    
+    try:
+        IMG_FUNDO_MENU = pygame.image.load('recursos/tela_inicial.png').convert()
+        IMG_FUNDO_AJUSTES = pygame.image.load('recursos/ajustes.png').convert()
+        IMG_FUNDO_JOGO = pygame.image.load('recursos/fundo_tabuleiro.png').convert() # <-- CARREGAMENTO AQUI!
+        
+        # Garante o redimensionamento para a tela (1050x840)
+        if IMG_FUNDO_MENU.get_size() != (LARGURA_TELA, ALTURA_TELA):
+            IMG_FUNDO_MENU = pygame.transform.scale(IMG_FUNDO_MENU, (LARGURA_TELA, ALTURA_TELA))
+        if IMG_FUNDO_AJUSTES.get_size() != (LARGURA_TELA, ALTURA_TELA):
+            IMG_FUNDO_AJUSTES = pygame.transform.scale(IMG_FUNDO_AJUSTES, (LARGURA_TELA, ALTURA_TELA))
+        if IMG_FUNDO_JOGO.get_size() != (LARGURA_TELA, ALTURA_TELA): # <-- NOVO
+            IMG_FUNDO_JOGO = pygame.transform.scale(IMG_FUNDO_JOGO, (LARGURA_TELA, ALTURA_TELA))
+
+    except (FileNotFoundError, pygame.error) as e:
+        print(f"Erro ao carregar imagem de fundo: {e}. Verifique a pasta 'recursos'.")
+        # Fallback de tela branca
+        IMG_FUNDO_MENU = IMG_FUNDO_AJUSTES = IMG_FUNDO_JOGO = pygame.Surface((LARGURA_TELA, ALTURA_TELA))
+        IMG_FUNDO_MENU.fill(cores.branco)
+
+
+    # --- 4. Chamada da tela de menu (Passando as duas imagens) ---
+    modo_jogo = menu_inicial.tela_de_menu(
+        tela, LARGURA_TELA, ALTURA_TELA, 
+        fonte_titulo, fonte_botoes, 
+        IMG_FUNDO_MENU,          
+        IMG_FUNDO_AJUSTES       
+    )
+
+    if modo_jogo is None or modo_jogo == 'sair':
         pygame.quit()
         return
 
-    # --- Carregando Imagens ---
+    # --- 5. Configuração do Tabuleiro (Lendo do config.py) ---
+    # Lendo o tamanho do tabuleiro definido no menu de Ajustes (config.py)
+    NUM_LINHAS = config.MAPA_TAMANHOS[config.TAMANHO_TABULEIRO][0] 
+    NUM_COLUNAS = config.MAPA_TAMANHOS[config.TAMANHO_TABULEIRO][1] 
+
+    # O tamanho do tabuleiro muda se o jogador escolher 6x6 ou 8x8
+    TAMANHO_TABULEIRO = NUM_COLUNAS * LADO_CELULA
+
+    # Offset para centralizar o tabuleiro na área de vidro fosco (4x4)
+    # Se o tamanho mudar para 6x6 ou 8x8, o tabuleiro ainda começa aqui!
+    OFFSET_X = 325 
+    OFFSET_Y = 280 
+    
+    # --- Carregando Imagens do Jogo (Tesouros, Buracos, Números) ---
     img_tesouro = None
     img_buraco = None
     img_celula_fechada = None
     img_numeros = {}
-
+    
+    # ... (Seu código de carregamento de imagens de jogo, ajustado para LADO_CELULA=100) ...
     try:
-        img_tesouro = pygame.image.load('recursos/tesouro.JPG')
-        img_buraco = pygame.image.load('recursos/buraco.JPG')
-        img_celula_fechada = pygame.image.load('recursos/celula_fechada.JPG')
+        img_tesouro = pygame.transform.scale(pygame.image.load('recursos/tesouro.JPG'), (LADO_CELULA, LADO_CELULA))
+        img_buraco = pygame.transform.scale(pygame.image.load('recursos/buraco.JPG'), (LADO_CELULA, LADO_CELULA))
+        img_celula_fechada = pygame.transform.scale(pygame.image.load('recursos/celula_fechada.JPG'), (LADO_CELULA, LADO_CELULA))
 
-        img_tesouro = pygame.transform.scale(img_tesouro, (LADO_CELULA, LADO_CELULA))
-        img_buraco = pygame.transform.scale(img_buraco, (LADO_CELULA, LADO_CELULA))
-        img_celula_fechada = pygame.transform.scale(img_celula_fechada, (LADO_CELULA, LADO_CELULA))
-
-        nomes_numeros = {
-            '0': 'zero',
-            '1': 'um',
-            '2': 'dois',
-            '3': 'tres',
-            '4': 'quatro'
-        }
-        
+        nomes_numeros = {'0': 'zero', '1': 'um', '2': 'dois', '3': 'tres', '4': 'quatro'}
         for numero, nome_arquivo in nomes_numeros.items():
-            caminho_arquivo = f'recursos/{nome_arquivo}.JPG'
-            img = pygame.image.load(caminho_arquivo)
-            img_numeros[numero] = pygame.transform.scale(img, (LADO_CELULA, LADO_CELULA))
+            img_numeros[numero] = pygame.transform.scale(pygame.image.load(f'recursos/{nome_arquivo}.JPG'), (LADO_CELULA, LADO_CELULA))
 
-    except FileNotFoundError as e:
-        print(f"Erro ao carregar imagem: {e}")
-        print("Verifique os nomes dos arquivos e a pasta 'recursos'.")
-        return
-    except pygame.error as e:
-        print(f"Erro no Pygame ao carregar/processar imagens: {e}")
+    except (FileNotFoundError, pygame.error) as e:
+        print(f"Erro ao carregar imagem de jogo: {e}. O jogo será encerrado.")
         return
 
     # --- Variáveis de Estado do Jogo ---
@@ -171,80 +215,89 @@ def main():
             if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                 mouse_x, mouse_y = evento.pos
                 
-                coluna_clicada = mouse_x // LADO_CELULA
-                linha_clicada = mouse_y // LADO_CELULA
+                # Ajusta a posição do clique para as coordenadas do tabuleiro
+                coluna_clicada = (mouse_x - OFFSET_X) // LADO_CELULA
+                linha_clicada = (mouse_y - OFFSET_Y) // LADO_CELULA
 
-                if 0 <= linha_clicada < NUM_LINHAS and 0 <= coluna_clicada < NUM_COLUNAS and not tabuleiro_visivel[linha_clicada][coluna_clicada]:
+                # Garante que o clique está dentro do tabuleiro e a célula está fechada
+                if (0 <= linha_clicada < NUM_LINHAS and 
+                    0 <= coluna_clicada < NUM_COLUNAS and 
+                    not tabuleiro_visivel[linha_clicada][coluna_clicada]):
                     
                     tabuleiro_visivel[linha_clicada][coluna_clicada] = True
-                    
                     conteudo = tabuleiro_solucao[linha_clicada][coluna_clicada]
                     
-                    # Lógica para o modo Padrão
+                    # Lógica para o modo Padrão / Morte Súbita ...
+                    # ... (Essa lógica permanece a mesma) ...
                     if modo_jogo == menu_inicial.MODO_PADRAO or modo_jogo == menu_inicial.MODO_MELHOR_DE_3:
                         celulas_reveladas += 1
                         if conteudo == 'T':
-                            if jogador_da_vez == 1:
-                                pontos_j1 += 100
-                            else:
-                                pontos_j2 += 100
+                            pontos_j1 += 100 if jogador_da_vez == 1 else 0
+                            pontos_j2 += 100 if jogador_da_vez == 2 else 0
                         elif conteudo == 'B':
-                            if jogador_da_vez == 1:
-                                pontos_j1 = max(0, pontos_j1 - 50)
-                            else:
-                                pontos_j2 = max(0, pontos_j2 - 50)
+                            pontos_j1 = max(0, pontos_j1 - 50) if jogador_da_vez == 1 else pontos_j1
+                            pontos_j2 = max(0, pontos_j2 - 50) if jogador_da_vez == 2 else pontos_j2
                         
                         # Troca de jogador
                         jogador_da_vez = 2 if jogador_da_vez == 1 else 1
                         
-                        # Verifica se o jogo no modo padrão terminou
                         if celulas_reveladas == total_celulas:
                             fim_de_jogo = True
-                            if pontos_j1 > pontos_j2:
-                                mensagem_final = "Jogador 1 Venceu!"
-                            elif pontos_j2 > pontos_j1:
-                                mensagem_final = "Jogador 2 Venceu!"
-                            else:
-                                mensagem_final = "Empate!"
+                            mensagem_final = "Empate!"
+                            if pontos_j1 > pontos_j2: mensagem_final = "Jogador 1 Venceu!"
+                            elif pontos_j2 > pontos_j1: mensagem_final = "Jogador 2 Venceu!"
 
-                    # Lógica para o modo Morte Súbita
                     elif modo_jogo == menu_inicial.MODO_MORTE_SUBITA:
                         if conteudo == 'B':
                             fim_de_jogo = True
                             mensagem_final = f"Jogador {jogador_da_vez} caiu no buraco! Fim de Jogo!"
                         elif conteudo == 'T':
                             fim_de_jogo = True
-                            if jogador_da_vez == 1:
-                                pontos_j1 += 100
-                                mensagem_final = "Jogador 1 Venceu!"
-                            else:
-                                pontos_j2 += 100
-                                mensagem_final = "Jogador 2 Venceu!"
+                            pontos_j1 += 100 if jogador_da_vez == 1 else 0
+                            pontos_j2 += 100 if jogador_da_vez == 2 else 0
+                            mensagem_final = f"Jogador {jogador_da_vez} Venceu!"
                         else: # Se for um número, apenas troca o jogador e continua
                             jogador_da_vez = 2 if jogador_da_vez == 1 else 1
 
 
         # --- Lógica de Desenho ---
-        tela.fill(cores.branco)
         
+        # 1. Desenha o Fundo do Jogo (fundo_tabuleiro.png)
+        tela.blit(IMG_FUNDO_JOGO, (0, 0))
+        
+        # 2. Desenha o Tabuleiro com o Offset
         desenhar_tabuleiro(tela, tabuleiro_visivel, tabuleiro_solucao, LADO_CELULA, 
-                           img_tesouro, img_buraco, img_celula_fechada, img_numeros)
-       
-        # Desenha a área do placar
-        area_placar = pygame.Rect(0, NUM_LINHAS * LADO_CELULA, largura_tela, LADO_CELULA)
-        pygame.draw.rect(tela, cores.azul_claro, area_placar)
-        
-        placar_txt = f"J1: {pontos_j1} pontos | J2: {pontos_j2} pontos"
-        texto_placar = fonte_placar.render(placar_txt, True, cores.preto)
-        tela.blit(texto_placar, (15, NUM_LINHAS * LADO_CELULA + 10))
+                           img_tesouro, img_buraco, img_celula_fechada, img_numeros,
+                           OFFSET_X, OFFSET_Y) 
 
-        if not fim_de_jogo:
-            vez_txt = f"Vez do Jogador: {jogador_da_vez}"
-            texto_vez = fonte_placar.render(vez_txt, True, cores.preto)
-            tela.blit(texto_vez, (15, NUM_LINHAS * LADO_CELULA + 40))
-        else:
-            texto_final = fonte_placar.render(mensagem_final, True, cores.vermelho)
-            tela.blit(texto_final, (largura_tela / 2 - texto_final.get_width() / 2, NUM_LINHAS * LADO_CELULA + 25))
+        # --- 3. Desenho do HUD (Placar e Vez) ---
+        
+        # Posições no design 7.jpg (centralizadas)
+        POS_SCORE_J1 = (220, 500) # Caixa 'score' Esquerda
+        POS_J1_Vez = (220, 100) # Botão 'Play 1'
+        POS_SCORE_J2 = (830, 500) # Caixa 'score' Direita
+        POS_J2_Vez = (830, 100) # Botão 'Play 2'
+        
+        # Cor de Destaque (Verde)
+        VERDE = (0, 255, 0)
+        
+        # Desenha Placar J1
+        desenhar_texto_centralizado(tela, f"{pontos_j1} PTS", fonte_placar, cores.preto, POS_SCORE_J1[0], POS_SCORE_J1[1])
+        
+        # Desenha Placar J2
+        desenhar_texto_centralizado(tela, f"{pontos_j2} PTS", fonte_placar, cores.preto, POS_SCORE_J2[0], POS_SCORE_J2[1])
+
+        # Desenha o Indicador de Vez (muda a cor do texto Play 1/2)
+        cor_j1 = VERDE if jogador_da_vez == 1 and not fim_de_jogo else cores.preto
+        cor_j2 = VERDE if jogador_da_vez == 2 and not fim_de_jogo else cores.preto
+
+        desenhar_texto_centralizado(tela, "Play 1", fonte_botoes, cor_j1, POS_J1_Vez[0], POS_J1_Vez[1])
+        desenhar_texto_centralizado(tela, "Play 2", fonte_botoes, cor_j2, POS_J2_Vez[0], POS_J2_Vez[1])
+
+        # Desenha Mensagem Final (no centro da tela)
+        if fim_de_jogo:
+            desenhar_texto_centralizado(tela, mensagem_final, fonte_titulo, cores.vermelho, LARGURA_TELA / 2, ALTURA_TELA / 2)
+
 
         pygame.display.update()
 
