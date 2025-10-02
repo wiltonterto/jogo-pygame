@@ -18,11 +18,11 @@ COR_TITULO = (30, 30, 30)
 CINZA_CLARO = (220, 220, 220) 
 
 # --- Constantes Visuais para AJUSTES (Proporcionais a 825x660) ---
-# Valores reduzidos: 180 -> 142, 200 -> 157, 350 -> 275
+
 LARGURA_QUADRADO = 142 
 ALTURA_QUADRADO = 142 
-ESPACO_QUADRADO = 157 
-Y_BOTOES_AJUSTES = 275 
+ESPACO_QUADRADO = 200 
+Y_BOTOES_AJUSTES = 265 
 
 COR_BOTAO_LIGADO = VERDE_DESTAQUE
 COR_BOTAO_DESLIGADO = CINZA_CLARO
@@ -90,7 +90,7 @@ def tela_de_ajustes(tela, largura_tela, altura_tela, fonte_titulo, fonte_botoes,
     ]
     
     # Botão Voltar (na parte inferior) - Proporcionalmente ajustado
-    botao_voltar = pygame.Rect(x_center - 100, altura_tela - 118, 200, 50)
+    botao_voltar = pygame.Rect(x_center - 100, altura_tela - 110, 200, 50)
     
     while True:
         mouse_pos = pygame.mouse.get_pos()
@@ -121,40 +121,46 @@ def tela_de_ajustes(tela, largura_tela, altura_tela, fonte_titulo, fonte_botoes,
         # --- Lógica de Desenho ---
         tela.blit(img_fundo_ajustes, (0, 0))
         
-        # Desenha os 3 Botões de Ajuste
+        # Desenha os 3 Botões de Ajuste (TOTALMENTE TRANSPARENTES, APENAS O TEXTO REAGE)
         for botao in botoes_ajustes:
             rect = botao['retangulo']
             
-            # Escolhe a cor de destaque (Toggle e Seleção)
-            cor_destaque = COR_BOTAO_DESLIGADO
-            if botao['acao'] == 'som' and config.SOM_LIGADO:
-                cor_destaque = COR_BOTAO_LIGADO
-            elif botao['acao'] in ["6x6", "8x8"] and config.TAMANHO_TABULEIRO == botao['acao']:
-                cor_destaque = COR_BOTAO_LIGADO
-                
-            # Efeito Hover: Contorno Verde
-            contorno = 0
-            if rect.collidepoint(mouse_pos):
-                contorno = 3 
-                
-            pygame.draw.rect(tela, cor_destaque, rect, border_radius=15)
-            pygame.draw.rect(tela, VERDE_DESTAQUE, rect, contorno, border_radius=15)
+            # 1. Verifica o estado de SELEÇÃO PERMANENTE (PARA O CASO DE TER QUE TER UM DESTAQUE)
+            esta_selecionado = (botao['acao'] == 'som' and config.SOM_LIGADO) or \
+                               (botao['acao'] in ["6x6", "8x8"] and config.TAMANHO_TABULEIRO == botao['acao'])
             
-            # Desenha o texto do botão
-            texto_render = fonte_botoes.render(botao['texto'], True, PRETO)
+            
+            # 2. Lógica de COR do Texto
+            cor_texto = PRETO # Cor padrão do texto
+            
+            if esta_selecionado:
+                # O texto deve ser verde se estiver selecionado
+                cor_texto = VERDE_DESTAQUE
+                
+            if rect.collidepoint(mouse_pos):
+                # No hover, o texto fica verde (independente da seleção)
+                cor_texto = VERDE_DESTAQUE 
+                
+            
+            # NOTA: Removemos todos os pygame.draw.rect(tela, ...) para o preenchimento ou contorno.
+            
+            
+            # 3. Desenha o texto do botão
+            texto_render = fonte_botoes.render(botao['texto'], True, cor_texto)
             tela.blit(texto_render, texto_render.get_rect(center=rect.center))
 
 
-        # Desenha o botão VOLTAR
-        cor_voltar = COR_BOTAO_DESLIGADO
-        contorno_voltar = 0
-        if botao_voltar.collidepoint(mouse_pos):
-            contorno_voltar = 3
-            
-        pygame.draw.rect(tela, cor_voltar, botao_voltar, border_radius=15)
-        pygame.draw.rect(tela, VERDE_DESTAQUE, botao_voltar, contorno_voltar, border_radius=15)
+        # --- Desenha o botão VOLTAR (TOTALMENTE TRANSPARENTE, APENAS O TEXTO REAGE) ---
+        cor_texto_voltar = PRETO 
         
-        texto_voltar = fonte_botoes.render("VOLTAR", True, PRETO)
+        # Lógica de HOVER para o botão VOLTAR
+        if botao_voltar.collidepoint(mouse_pos):
+            cor_texto_voltar = VERDE_DESTAQUE
+            
+        # NOTA: Removemos os pygame.draw.rect(tela, ...) para o preenchimento ou contorno.
+            
+        # Desenha o texto (com a cor de hover)
+        texto_voltar = fonte_botoes.render("VOLTAR", True, cor_texto_voltar)
         tela.blit(texto_voltar, texto_voltar.get_rect(center=botao_voltar.center))
         
         pygame.display.flip()

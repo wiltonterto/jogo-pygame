@@ -113,11 +113,11 @@ def main():
     try:
         fonte_titulo = pygame.font.Font(CAMINHO_FONTE, 40)
         fonte_botoes = pygame.font.Font(CAMINHO_FONTE, 20)
-        fonte_placar = pygame.font.Font(CAMINHO_FONTE, 16)
+        fonte_placar = pygame.font.Font(CAMINHO_FONTE, 20)
     except (FileNotFoundError, pygame.error):
         fonte_titulo = pygame.font.SysFont(FONTE_FALLBACK, 40, bold=True)
         fonte_botoes = pygame.font.SysFont(FONTE_FALLBACK, 20)
-        fonte_placar = pygame.font.SysFont(FONTE_FALLBACK, 16)
+        fonte_placar = pygame.font.SysFont(FONTE_FALLBACK, 20)
     
     # --- 3. Carregamento de Imagens de Fundo (Menu e Ajustes) ---
     IMG_FUNDO_MENU = None
@@ -283,10 +283,10 @@ def main():
         # --- 3. Desenho do HUD (Placar e Vez) ---
         
         # Novas Posições Proporcionais (Ajustadas para 825x660)
-        POS_SCORE_J1 = (175, 400) # Caixa 'score' Esquerda
-        POS_J1_Vez = (175, 105)    # Botão 'Play 1'
-        POS_SCORE_J2 = (650, 400) # Caixa 'score' Direita
-        POS_J2_Vez = (650, 105)    # Botão 'Play 2'
+        POS_SCORE_J1 = (120, 380) # Caixa 'score' Esquerda
+        POS_J1_Vez = (165, 105)    # Botão 'Play 1'
+        POS_SCORE_J2 = (695, 380) # Caixa 'score' Direita
+        POS_J2_Vez = (660, 105)    # Botão 'Play 2'
         
         # Cor de Destaque (Verde)
         VERDE_DESTAQUE = (0, 179, 0)
