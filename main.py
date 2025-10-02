@@ -4,10 +4,10 @@ import cores
 import menu_inicial 
 import config # Importa as configurações dinâmicas (TAMANHO_TABULEIRO, SOM_LIGADO)
 
-# --- Constantes de Configuração Geral ---
-LARGURA_TELA = 1050
-ALTURA_TELA = 840 
-LADO_CELULA = 100 # Tamanho base da célula (usado para 4x4, 6x6, 8x8)
+# --- Constantes de Configuração Geral (NOVOS VALORES) ---
+LARGURA_TELA = 825  # NOVA LARGURA (Proporcional)
+ALTURA_TELA = 660   # NOVA ALTURA (Proporcional)
+LADO_CELULA = 75    # NOVO TAMANHO DE CÉLULA (Proporcional a 100px)
 
 NUM_TESOUROS = 6 # Mantido constante
 NUM_BURACOS = 3 # Mantido constante
@@ -76,6 +76,7 @@ def desenhar_tabuleiro(tela, tabuleiro_visivel, tabuleiro_solucao, lado_celula,
             if tabuleiro_visivel[linha][coluna]:
                 conteudo = tabuleiro_solucao[linha][coluna]
                 
+                # As imagens são redimensionadas para o novo LADO_CELULA=75
                 if conteudo == 'T':
                     tela.blit(img_tesouro, (x, y))
                 elif conteudo == 'B':
@@ -110,30 +111,31 @@ def main():
     FONTE_FALLBACK = "Arial" 
 
     try:
-        fonte_titulo = pygame.font.Font(CAMINHO_FONTE, 60)
-        fonte_botoes = pygame.font.Font(CAMINHO_FONTE, 30)
-        fonte_placar = pygame.font.Font(CAMINHO_FONTE, 24)
+        fonte_titulo = pygame.font.Font(CAMINHO_FONTE, 40)
+        fonte_botoes = pygame.font.Font(CAMINHO_FONTE, 20)
+        fonte_placar = pygame.font.Font(CAMINHO_FONTE, 16)
     except (FileNotFoundError, pygame.error):
-        fonte_titulo = pygame.font.SysFont(FONTE_FALLBACK, 60, bold=True)
-        fonte_botoes = pygame.font.SysFont(FONTE_FALLBACK, 30)
-        fonte_placar = pygame.font.SysFont(FONTE_FALLBACK, 24)
+        fonte_titulo = pygame.font.SysFont(FONTE_FALLBACK, 40, bold=True)
+        fonte_botoes = pygame.font.SysFont(FONTE_FALLBACK, 20)
+        fonte_placar = pygame.font.SysFont(FONTE_FALLBACK, 16)
     
     # --- 3. Carregamento de Imagens de Fundo (Menu e Ajustes) ---
     IMG_FUNDO_MENU = None
     IMG_FUNDO_AJUSTES = None
-    IMG_FUNDO_JOGO = None # <-- NOVO
+    IMG_FUNDO_JOGO = None 
     
     try:
+        # Nota: As imagens carregadas agora DEVEM ser da resolução 825x660
         IMG_FUNDO_MENU = pygame.image.load('recursos/tela_inicial.png').convert()
         IMG_FUNDO_AJUSTES = pygame.image.load('recursos/ajustes.png').convert()
-        IMG_FUNDO_JOGO = pygame.image.load('recursos/fundo_tabuleiro.png').convert() # <-- CARREGAMENTO AQUI!
+        IMG_FUNDO_JOGO = pygame.image.load('recursos/fundo_tabuleiro.png').convert() 
         
-        # Garante o redimensionamento para a tela (1050x840)
+        # Garante o redimensionamento para a tela (825x660)
         if IMG_FUNDO_MENU.get_size() != (LARGURA_TELA, ALTURA_TELA):
             IMG_FUNDO_MENU = pygame.transform.scale(IMG_FUNDO_MENU, (LARGURA_TELA, ALTURA_TELA))
         if IMG_FUNDO_AJUSTES.get_size() != (LARGURA_TELA, ALTURA_TELA):
             IMG_FUNDO_AJUSTES = pygame.transform.scale(IMG_FUNDO_AJUSTES, (LARGURA_TELA, ALTURA_TELA))
-        if IMG_FUNDO_JOGO.get_size() != (LARGURA_TELA, ALTURA_TELA): # <-- NOVO
+        if IMG_FUNDO_JOGO.get_size() != (LARGURA_TELA, ALTURA_TELA):
             IMG_FUNDO_JOGO = pygame.transform.scale(IMG_FUNDO_JOGO, (LARGURA_TELA, ALTURA_TELA))
 
     except (FileNotFoundError, pygame.error) as e:
@@ -156,17 +158,25 @@ def main():
         return
 
     # --- 5. Configuração do Tabuleiro (Lendo do config.py) ---
-    # Lendo o tamanho do tabuleiro definido no menu de Ajustes (config.py)
     NUM_LINHAS = config.MAPA_TAMANHOS[config.TAMANHO_TABULEIRO][0] 
     NUM_COLUNAS = config.MAPA_TAMANHOS[config.TAMANHO_TABULEIRO][1] 
 
-    # O tamanho do tabuleiro muda se o jogador escolher 6x6 ou 8x8
     TAMANHO_TABULEIRO = NUM_COLUNAS * LADO_CELULA
 
-    # Offset para centralizar o tabuleiro na área de vidro fosco (4x4)
-    # Se o tamanho mudar para 6x6 ou 8x8, o tabuleiro ainda começa aqui!
-    OFFSET_X = 325 
-    OFFSET_Y = 280 
+    # --- CÁLCULO DE OFFSET ADAPTÁVEL PARA CENTRALIZAÇÃO (AJUSTADO PARA A NOVA ESCALA) ---
+    CENTRO_TELA_X = LARGURA_TELA // 2 # 825 / 2 = 412
+    
+    # OFFSET_X: Centraliza o tabuleiro horizontalmente na tela de 825px
+    OFFSET_X = CENTRO_TELA_X - (TAMANHO_TABULEIRO // 2)
+    
+    # OFFSET_Y: Base para centralizar o tabuleiro verticalmente (250px era a base antiga de 840px)
+    # 250 * (660/840) ≈ 196
+    BASE_OFFSET_Y = 196 
+    TAMANHO_PADRAO_4X4 = 4 * LADO_CELULA # 300px
+    
+    # Ajusta o Y para que o centro do tabuleiro fique na mesma posição vertical (se o tamanho mudar)
+    OFFSET_Y = BASE_OFFSET_Y - (TAMANHO_TABULEIRO - TAMANHO_PADRAO_4X4) // 2
+
     
     # --- Carregando Imagens do Jogo (Tesouros, Buracos, Números) ---
     img_tesouro = None
@@ -174,7 +184,7 @@ def main():
     img_celula_fechada = None
     img_numeros = {}
     
-    # ... (Seu código de carregamento de imagens de jogo, ajustado para LADO_CELULA=100) ...
+    # O código redimensiona automaticamente para LADO_CELULA=75px
     try:
         img_tesouro = pygame.transform.scale(pygame.image.load('recursos/tesouro.JPG'), (LADO_CELULA, LADO_CELULA))
         img_buraco = pygame.transform.scale(pygame.image.load('recursos/buraco.JPG'), (LADO_CELULA, LADO_CELULA))
@@ -262,7 +272,7 @@ def main():
 
         # --- Lógica de Desenho ---
         
-        # 1. Desenha o Fundo do Jogo (fundo_tabuleiro.png)
+        # 1. Desenha o Fundo do Jogo (fundo_tabuleiro.png - agora em 825x660)
         tela.blit(IMG_FUNDO_JOGO, (0, 0))
         
         # 2. Desenha o Tabuleiro com o Offset
@@ -272,14 +282,14 @@ def main():
 
         # --- 3. Desenho do HUD (Placar e Vez) ---
         
-        # Posições no design 7.jpg (centralizadas)
-        POS_SCORE_J1 = (220, 500) # Caixa 'score' Esquerda
-        POS_J1_Vez = (220, 100) # Botão 'Play 1'
-        POS_SCORE_J2 = (830, 500) # Caixa 'score' Direita
-        POS_J2_Vez = (830, 100) # Botão 'Play 2'
+        # Novas Posições Proporcionais (Ajustadas para 825x660)
+        POS_SCORE_J1 = (175, 400) # Caixa 'score' Esquerda
+        POS_J1_Vez = (175, 105)    # Botão 'Play 1'
+        POS_SCORE_J2 = (650, 400) # Caixa 'score' Direita
+        POS_J2_Vez = (650, 105)    # Botão 'Play 2'
         
         # Cor de Destaque (Verde)
-        VERDE = (0, 255, 0)
+        VERDE_DESTAQUE = (0, 179, 0)
         
         # Desenha Placar J1
         desenhar_texto_centralizado(tela, f"{pontos_j1} PTS", fonte_placar, cores.preto, POS_SCORE_J1[0], POS_SCORE_J1[1])
@@ -288,8 +298,8 @@ def main():
         desenhar_texto_centralizado(tela, f"{pontos_j2} PTS", fonte_placar, cores.preto, POS_SCORE_J2[0], POS_SCORE_J2[1])
 
         # Desenha o Indicador de Vez (muda a cor do texto Play 1/2)
-        cor_j1 = VERDE if jogador_da_vez == 1 and not fim_de_jogo else cores.preto
-        cor_j2 = VERDE if jogador_da_vez == 2 and not fim_de_jogo else cores.preto
+        cor_j1 = VERDE_DESTAQUE if jogador_da_vez == 1 and not fim_de_jogo else cores.preto
+        cor_j2 = VERDE_DESTAQUE if jogador_da_vez == 2 and not fim_de_jogo else cores.preto
 
         desenhar_texto_centralizado(tela, "Play 1", fonte_botoes, cor_j1, POS_J1_Vez[0], POS_J1_Vez[1])
         desenhar_texto_centralizado(tela, "Play 2", fonte_botoes, cor_j2, POS_J2_Vez[0], POS_J2_Vez[1])

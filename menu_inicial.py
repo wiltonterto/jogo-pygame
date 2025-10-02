@@ -6,46 +6,48 @@ import config
 MODO_PADRAO = 'padrao'
 MODO_MELHOR_DE_3 = 'melhor_de_3'
 MODO_MORTE_SUBITA = 'morte_subita'
-MODO_AJUSTES = 'ajustes'   # NOVO: Para a tela 4.png
-MODO_REGRAS = 'regras'     # NOVO
-MODO_SAIR = 'sair'         # NOVO
+MODO_AJUSTES = 'ajustes'   
+MODO_REGRAS = 'regras'     
+MODO_SAIR = 'sair'         
+MODO_RECOMECO = 'recomecar' 
 
 # --- Constantes de Cores para o Hover ---
-
 PRETO = (0, 0, 0) 
-# Use uma cor de destaque para o hover (você pode ajustar este verde)
 VERDE_DESTAQUE = (144, 238, 144) 
-# Cor para o título (o tom dourado da sua imagem, ou preto se preferir)
 COR_TITULO = (30, 30, 30) 
+CINZA_CLARO = (220, 220, 220) 
 
-# --- Constantes Visuais para AJUSTES (Baseado no design 4.png) ---
-LARGURA_QUADRADO = 180
-ALTURA_QUADRADO = 180
-ESPACO_QUADRADO = 200 # Distância entre os centros dos quadrados
-Y_BOTOES_AJUSTES = 350 # Altura dos 3 botões quadrados
+# --- Constantes Visuais para AJUSTES (Proporcionais a 825x660) ---
+# Valores reduzidos: 180 -> 142, 200 -> 157, 350 -> 275
+LARGURA_QUADRADO = 142 
+ALTURA_QUADRADO = 142 
+ESPACO_QUADRADO = 157 
+Y_BOTOES_AJUSTES = 275 
 
-# Cores para o toggle
-COR_BOTAO_LIGADO = (144, 238, 144) # O verde do seu hover
-COR_BOTAO_DESLIGADO = (220, 220, 220) # Um cinza claro
+COR_BOTAO_LIGADO = VERDE_DESTAQUE
+COR_BOTAO_DESLIGADO = CINZA_CLARO
 
 # --- Funções de Configuração ---
 
 def get_botoes_config(largura_tela):
     """Define as posições e ações de todos os botões do menu."""
     
-    LARGURA_BOTAO = 240 # Largura visual aproximada da pílula
-    ALTURA_BOTAO = 50   # Altura visual aproximada da pílula
-    ESPACO_VERTICAL = 70 # Distância entre os centros dos botões
+    LARGURA_BOTAO = 190 
+    ALTURA_BOTAO = 42   
+    ESPACO_VERTICAL = 52
     
-    # O ponto X onde o retângulo de clique começa (centralizado em 1050px)
+    # O ponto X onde o retângulo de clique começa (centralizado em 825px)
     x_start = largura_tela // 2 - LARGURA_BOTAO // 2 
     
-    # O ponto Y onde o primeiro botão (Modo Padrão) está centralizado na imagem
-    y_start_base = 395
+    # Novo centro vertical é 660 / 2 = 330
+    CENTRO_Y = 300 
+    
+    # Posição do topo do primeiro botão (Ajustado para o novo centro)
+    y_start_base = 314
     
     return [
         {'texto': "MODO PADRÃO", 'modo': MODO_PADRAO, 
-         'retangulo': pygame.Rect(x_start, y_start_base, LARGURA_BOTAO, ALTURA_BOTAO)},
+         'retangulo': pygame.Rect(x_start, y_start_base + 0 * ESPACO_VERTICAL, LARGURA_BOTAO, ALTURA_BOTAO)},
         
         {'texto': "MELHOR DE 3", 'modo': MODO_MELHOR_DE_3, 
          'retangulo': pygame.Rect(x_start, y_start_base + 1 * ESPACO_VERTICAL, LARGURA_BOTAO, ALTURA_BOTAO)},
@@ -63,6 +65,8 @@ def get_botoes_config(largura_tela):
          'retangulo': pygame.Rect(x_start, y_start_base + 5 * ESPACO_VERTICAL, LARGURA_BOTAO, ALTURA_BOTAO)},
     ]
 
+
+# --- Função da Tela de Ajustes (Design 4.png) ---
 
 def tela_de_ajustes(tela, largura_tela, altura_tela, fonte_titulo, fonte_botoes, img_fundo_menu, img_fundo_ajustes):
     
@@ -85,8 +89,8 @@ def tela_de_ajustes(tela, largura_tela, altura_tela, fonte_titulo, fonte_botoes,
          'retangulo': pygame.Rect(x_8x8 - LARGURA_QUADRADO // 2, Y_BOTOES_AJUSTES, LARGURA_QUADRADO, ALTURA_QUADRADO)},
     ]
     
-    # Botão Voltar (na parte inferior)
-    botao_voltar = pygame.Rect(x_center - 100, altura_tela - 150, 200, 50)
+    # Botão Voltar (na parte inferior) - Proporcionalmente ajustado
+    botao_voltar = pygame.Rect(x_center - 100, altura_tela - 118, 200, 50)
     
     while True:
         mouse_pos = pygame.mouse.get_pos()
@@ -115,7 +119,6 @@ def tela_de_ajustes(tela, largura_tela, altura_tela, fonte_titulo, fonte_botoes,
                             
         
         # --- Lógica de Desenho ---
-        # ATENÇÃO: Usa a imagem de fundo de AJUSTES!
         tela.blit(img_fundo_ajustes, (0, 0))
         
         # Desenha os 3 Botões de Ajuste
@@ -159,7 +162,6 @@ def tela_de_ajustes(tela, largura_tela, altura_tela, fonte_titulo, fonte_botoes,
 
 # --- Função Principal do Menu ---
 
-# A FUNÇÃO AGORA RECEBE AS DUAS IMAGENS DE FUNDO!
 def tela_de_menu(tela, largura_tela, altura_tela, fonte_titulo, fonte_botoes, img_fundo_menu, img_fundo_ajustes):
     """
     Exibe a tela de menu inicial, usa a imagem de fundo e gerencia a seleção de modo de jogo.
@@ -183,18 +185,31 @@ def tela_de_menu(tela, largura_tela, altura_tela, fonte_titulo, fonte_botoes, im
                         modo_escolhido = botao['modo']
 
                         if modo_escolhido == MODO_AJUSTES:
-                            # SE CLICAR EM AJUSTES, CHAMA A NOVA TELA E REPASSA AS DUAS IMAGENS
+                            # SE CLICAR EM AJUSTES, CHAMA A NOVA TELA
                             resultado_ajustes = tela_de_ajustes(
                                 tela, largura_tela, altura_tela, 
                                 fonte_titulo, fonte_botoes, 
                                 img_fundo_menu,             
-                                img_fundo_ajustes           # <--- Repasse correto!
+                                img_fundo_ajustes           
                             )
+                            # Se o usuário fechar a janela (QUIT) na tela de ajustes
                             if resultado_ajustes is None:
                                 return None
+                            # Se retornar, o loop do menu principal continua
                             
-                        else:
+                        elif modo_escolhido == MODO_SAIR:
+                            return None 
+                            
+                        # Para todos os modos de jogo (Padrão, Morte Súbita, Melhor de 3)
+                        elif modo_escolhido == MODO_PADRAO or modo_escolhido == MODO_MORTE_SUBITA or modo_escolhido == MODO_MELHOR_DE_3:
                             return modo_escolhido
+                            
+                        # Para Regras, futuramente você chamaria a tela_de_regras
+                        elif modo_escolhido == MODO_REGRAS:
+                            print("Chamando tela de regras (a ser implementada)")
+                            # O loop continua após a tela de regras
+                            
+                        # O loop principal continua para desenhar o menu novamente
         
         # --- Lógica de Desenho ---
         
