@@ -11,6 +11,7 @@ LADO_CELULA = 75
 
 NUM_TESOUROS = 6 
 NUM_BURACOS = 3 
+NUM_BURACOS_MORTE = 1
 
 # --- Funções Auxiliares ---
 def inicializar_tabuleiro(linhas, colunas, num_tesouros, num_buracos):
@@ -96,9 +97,34 @@ def desenhar_tela_fim_jogo(tela, img_fundo, mensagem, fonte_titulo, fonte_botoes
     tela.blit(img_fundo, (0, 0))
     mouse_x, mouse_y = pygame.mouse.get_pos()
     
+
+
     # 1. Desenha o título (Mensagem Central)
-    desenhar_texto_centralizado(tela, mensagem, fonte_titulo, cor_normal, 
-                                LARGURA_TELA / 2, ALTURA_TELA / 2 - 50)
+    # Tenta quebrar a mensagem em duas linhas: antes dos parênteses e nos parênteses
+    if '(' in mensagem and ')' in mensagem:
+        partes = mensagem.split('!', 1) # Divide em 2 na primeira exclamação, se houver
+    
+        # Linha Superior (Ex: JOGADOR 1 VENCEU!)
+        texto_linha_1 = partes[0].strip() + "!" if len(partes) > 1 else mensagem
+    
+        # Linha Inferior (Ex: (BURACO ENCONTRADO POR J2))
+        texto_linha_2 = partes[1].strip() if len(partes) > 1 else ""
+
+        y_base = ALTURA_TELA / 2 - 50 # Posição central original
+        offset_quebra = 30 # Distância vertical entre as linhas
+    
+        # Desenha a primeira linha (acima do centro)
+        desenhar_texto_centralizado(tela, texto_linha_1, fonte_titulo, cor_normal, 
+                                 LARGURA_TELA / 2, y_base - offset_quebra/2)
+                                 
+        # Desenha a segunda linha (abaixo do centro)
+        desenhar_texto_centralizado(tela, texto_linha_2, fonte_titulo, cor_normal, 
+                                 LARGURA_TELA / 2, y_base + offset_quebra/2)
+                                 
+    else:
+        # Se não houver parênteses ou for uma mensagem padrão (EMPATE!/Próxima Rodada)
+        desenhar_texto_centralizado(tela, mensagem, fonte_titulo, cor_normal, 
+                                 LARGURA_TELA / 2, ALTURA_TELA / 2 - 50)
 
     # 2. Botão 1 (Nova Rodada / Novo Jogo)
     cor_btn_1 = cor_destaque if btn_nova_rodada.collidepoint((mouse_x, mouse_y)) else cor_normal
@@ -207,7 +233,11 @@ def main():
         return
 
     # --- Variáveis de Estado do Jogo ---
-    tabuleiro_solucao = inicializar_tabuleiro(NUM_LINHAS, NUM_COLUNAS, NUM_TESOUROS, NUM_BURACOS)
+
+    num_buracos_rodada = NUM_BURACOS
+    if modo_jogo == menu_inicial.MODO_MORTE_SUBITA:
+        num_buracos_rodada = NUM_BURACOS_MORTE
+    tabuleiro_solucao = inicializar_tabuleiro(NUM_LINHAS, NUM_COLUNAS, NUM_TESOUROS, num_buracos_rodada)
     # CRIAÇÃO CORRETA DA MATRIZ
     tabuleiro_visivel = [[False for _ in range(NUM_COLUNAS)] for _ in range(NUM_LINHAS)] 
     
@@ -391,15 +421,28 @@ def main():
                                 
                     # --- LÓGICA DO MODO MORTE SÚBITA ---
                     elif modo_jogo == menu_inicial.MODO_MORTE_SUBITA:
-                        if conteudo == 'B' or conteudo == 'T':
-                            fim_de_jogo = True 
-                            if conteudo == 'B':
-                                mensagem_final = f"JOGADOR {jogador_da_vez} CAIU NO BURACO! FIM DE JOGO!"
+                        if conteudo == 'T':
+                            # Encontrou Tesouro: Pontua e o turno passa
+                            pontos_j1 += 100 if jogador_da_vez == 1 else 0
+                            pontos_j2 += 100 if jogador_da_vez == 2 else 0
+                            jogador_da_vez = 2 if jogador_da_vez == 1 else 1
+
+                        elif conteudo == 'B':
+                            # Encontrou Buraco: FIM DE JOGO
+                            fim_de_jogo = True
+
+                            # Determina o vencedor pela pontuação
+                            mensagem_final = "EMPATE!"
+                            if pontos_j1 > pontos_j2: 
+                                mensagem_final = f"JOGADOR 1 VENCEU! (Buraco encontrado por J{jogador_da_vez})"
+                            elif pontos_j2 > pontos_j1: 
+                                mensagem_final = f"JOGADOR 2 VENCEU! (Buraco encontrado por J{jogador_da_vez})"
                             else:
-                                pontos_j1 += 100 if jogador_da_vez == 1 else 0
-                                pontos_j2 += 100 if jogador_da_vez == 2 else 0
-                                mensagem_final = f"JOGADOR {jogador_da_vez} VENCEU!"
+                                mensagem_final = f"EMPATE! (Buraco encontrado por J{jogador_da_vez})"
+
+                            # Não precisa alternar a vez, o jogo acabou
                         else: 
+                            # Encontrou número ou célula vazia: Turno passa
                             jogador_da_vez = 2 if jogador_da_vez == 1 else 1
 
 

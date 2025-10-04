@@ -29,6 +29,73 @@ COR_BOTAO_DESLIGADO = CINZA_CLARO
 
 # --- Funções de Configuração ---
 
+def tela_de_regras(tela, largura_tela, altura_tela, fonte_botoes, cor_normal, cor_destaque):
+    """
+    Mostra a tela de regras em duas páginas com navegação.
+    Retorna 'menu' quando o jogador clica em 'Voltar ao Menu' ou 'sair'.
+    """
+    
+    # 1. Carregamento e Redimensionamento das Imagens (já na pasta 'recursos')
+    try:
+        # Imagem 1: Regras e Pontuação (Com botão "Próximo")
+        img_regras_1 = pygame.image.load('recursos/regras_jogo.png').convert_alpha()
+        img_regras_1 = pygame.transform.scale(img_regras_1, (largura_tela, altura_tela))
+        
+        # Imagem 2: Modos de Jogo (Com botão "Voltar ao Menu")
+        img_regras_2 = pygame.image.load('recursos/regras_jogo_1.png').convert_alpha()
+        img_regras_2 = pygame.transform.scale(img_regras_2, (largura_tela, altura_tela))
+
+    except pygame.error as e:
+        print(f"Erro ao carregar imagens de regras: {e}. Verifique os nomes (regras_jogo.png e regras_jogo_1.png).")
+        return MODO_REGRAS # Se falhar, retorna ao menu principal
+        
+    # 2. Definição do Botão (Posição fixa na parte inferior da sua imagem)
+    LARGURA_BOTAO = 190 # Usando a largura padrão de get_botoes_config para consistência
+    ALTURA_BOTAO = 42
+    CENTRO_X = largura_tela // 2
+    
+    # Posição Y do botão (Ajustada para o local exato na imagem)
+    POS_Y_BOTAO = altura_tela - 136 
+    
+    botao_acao = pygame.Rect(CENTRO_X - LARGURA_BOTAO // 2, POS_Y_BOTAO, LARGURA_BOTAO, ALTURA_BOTAO)
+    
+    pagina_atual = 1
+    
+    # 3. Loop da Tela de Regras
+    while True:
+        mouse_x, mouse_y = pygame.mouse.get_pos()
+        
+        # Desenha o fundo da página atual
+        if pagina_atual == 1:
+            tela.blit(img_regras_1, (0, 0))
+            texto_botao = "PRÓXIMO"
+        else: # página_atual == 2
+            tela.blit(img_regras_2, (0, 0))
+            texto_botao = "VOLTAR AO MENU"
+        
+        # Lógica do Botão Hover
+        cor_btn = cor_destaque if botao_acao.collidepoint((mouse_x, mouse_y)) else cor_normal
+        
+        # Desenha o texto do botão (usando a função de renderização de texto padrão)
+        texto_renderizado = fonte_botoes.render(texto_botao, True, cor_btn)
+        tela.blit(texto_renderizado, texto_renderizado.get_rect(center=botao_acao.center))
+
+        # 4. Tratamento de Eventos (Cliques)
+        for evento in pygame.event.get():
+            if evento.type == pygame.QUIT:
+                return None
+            
+            if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
+                if botao_acao.collidepoint(evento.pos):
+                    if pagina_atual == 1:
+                        # Vai para a página 2
+                        pagina_atual = 2
+                    else:
+                        # Clicou em "Voltar ao Menu" na página 2
+                        return MODO_REGRAS # Sinaliza para voltar ao menu principal
+
+        pygame.display.flip()
+
 def get_botoes_config(largura_tela):
     """Define as posições e ações de todos os botões do menu."""
     
@@ -212,8 +279,14 @@ def tela_de_menu(tela, largura_tela, altura_tela, fonte_titulo, fonte_botoes, im
                             
                         # Para Regras, futuramente você chamaria a tela_de_regras
                         elif modo_escolhido == MODO_REGRAS:
-                            print("Chamando tela de regras (a ser implementada)")
-                            # O loop continua após a tela de regras
+                            # 1. CHAMA A NOVA TELA DE REGRAS
+                            resultado_regras = tela_de_regras(tela, largura_tela, altura_tela, fonte_botoes, PRETO, VERDE_DESTAQUE)
+                            
+                            # 2. Lógica de retorno
+                            if resultado_regras is None:
+                                return None # Usuário clicou no X (Sair)
+                                # Se retornar MODO_REGRAS (Voltar ao Menu), o loop continua e redesenha o menu
+
                             
                         # O loop principal continua para desenhar o menu novamente
         
@@ -238,3 +311,4 @@ def tela_de_menu(tela, largura_tela, altura_tela, fonte_titulo, fonte_botoes, im
             tela.blit(texto_renderizado, texto_renderizado.get_rect(center=retangulo.center))
         
         pygame.display.flip()
+
