@@ -7,7 +7,7 @@ import config # Importa as configurações dinâmicas (TAMANHO_TABULEIRO, SOM_LI
 # --- Constantes de Configuração Geral (NOVOS VALORES) ---
 LARGURA_TELA = 825 
 ALTURA_TELA = 660 
-LADO_CELULA = 75 
+LADO_CELULA = 85 
 
 NUM_TESOUROS = 6 
 NUM_BURACOS = 3 
@@ -92,49 +92,41 @@ def desenhar_texto_centralizado(tela, texto, fonte, cor, centro_x, centro_y):
 
 
 def desenhar_tela_fim_jogo(tela, img_fundo, mensagem, fonte_titulo, fonte_botoes, 
-                           btn_nova_rodada, btn_voltar, msg_btn_1, msg_btn_2, cor_destaque, cor_normal):
+                            btn_nova_rodada, btn_voltar, msg_btn_1, msg_btn_2, cor_destaque, cor_normal):
     """Desenha a tela de Game Over/Transição com botões com efeito hover."""
     tela.blit(img_fundo, (0, 0))
     mouse_x, mouse_y = pygame.mouse.get_pos()
     
-
-
     # 1. Desenha o título (Mensagem Central)
-    # Tenta quebrar a mensagem em duas linhas: antes dos parênteses e nos parênteses
-    if '(' in mensagem and ')' in mensagem:
-        partes = mensagem.split('!', 1) # Divide em 2 na primeira exclamação, se houver
-    
-        # Linha Superior (Ex: JOGADOR 1 VENCEU!)
-        texto_linha_1 = partes[0].strip() + "!" if len(partes) > 1 else mensagem
-    
-        # Linha Inferior (Ex: (BURACO ENCONTRADO POR J2))
+    if '!' in mensagem and '(' in mensagem and ')' in mensagem:
+        # Lógica de quebra de linha para mensagens de Morte Súbita
+        partes = mensagem.split('!', 1) 
+        texto_linha_1 = partes[0].strip() + "!" 
         texto_linha_2 = partes[1].strip() if len(partes) > 1 else ""
 
-        y_base = ALTURA_TELA / 2 - 50 # Posição central original
-        offset_quebra = 30 # Distância vertical entre as linhas
-    
-        # Desenha a primeira linha (acima do centro)
+        y_base = ALTURA_TELA / 2 - 50 
+        offset_quebra = 30 
+        
         desenhar_texto_centralizado(tela, texto_linha_1, fonte_titulo, cor_normal, 
                                  LARGURA_TELA / 2, y_base - offset_quebra/2)
                                  
-        # Desenha a segunda linha (abaixo do centro)
         desenhar_texto_centralizado(tela, texto_linha_2, fonte_titulo, cor_normal, 
                                  LARGURA_TELA / 2, y_base + offset_quebra/2)
                                  
     else:
-        # Se não houver parênteses ou for uma mensagem padrão (EMPATE!/Próxima Rodada)
+        # Mensagem padrão (EMPATE!/Próxima Rodada)
         desenhar_texto_centralizado(tela, mensagem, fonte_titulo, cor_normal, 
                                  LARGURA_TELA / 2, ALTURA_TELA / 2 - 50)
 
     # 2. Botão 1 (Nova Rodada / Novo Jogo)
     cor_btn_1 = cor_destaque if btn_nova_rodada.collidepoint((mouse_x, mouse_y)) else cor_normal
     desenhar_texto_centralizado(tela, msg_btn_1, fonte_botoes, cor_btn_1, 
-                                btn_nova_rodada.centerx, btn_nova_rodada.centery)
+                                 btn_nova_rodada.centerx, btn_nova_rodada.centery)
 
     # 3. Botão 2 (Voltar ao Menu)
     cor_btn_2 = cor_destaque if btn_voltar.collidepoint((mouse_x, mouse_y)) else cor_normal
     desenhar_texto_centralizado(tela, msg_btn_2, fonte_botoes, cor_btn_2, 
-                                btn_voltar.centerx, btn_voltar.centery)
+                                 btn_voltar.centerx, btn_voltar.centery)
 
 # --- Função Principal ---
 
@@ -159,10 +151,8 @@ def main():
         som_vitoria = pygame.mixer.Sound('recursos/som_vitoria.wav')
     except (FileNotFoundError, pygame.error) as e:
         print(f"Erro ao carregar um arquivo de som: {e}. O jogo continuará sem som.")
-        # Se um som não carregar, o jogo não vai quebrar.
-
-        
-    # --- Função Auxiliar para Tocar Som --- # <<< NOVA FUNÇÃO INTERNA >>>
+    
+    # --- Função Auxiliar para Tocar Som --- 
     def tocar_som(som):
         """
         Toca um som somente se a opção de som estiver ligada no config
@@ -234,7 +224,7 @@ def main():
     # --- CÁLCULO DE OFFSET ADAPTÁVEL PARA CENTRALIZAÇÃO ---
     CENTRO_TELA_X = LARGURA_TELA // 2
     OFFSET_X = CENTRO_TELA_X - (TAMANHO_TABULEIRO // 2)
-    BASE_OFFSET_Y = 196 
+    BASE_OFFSET_Y = 200 
     TAMANHO_PADRAO_4X4 = 4 * LADO_CELULA
     OFFSET_Y = BASE_OFFSET_Y - (TAMANHO_TABULEIRO - TAMANHO_PADRAO_4X4) // 2
 
@@ -297,10 +287,23 @@ def main():
     
     # Cores
     VERDE_DESTAQUE = (0, 179, 0) # Cor de destaque (hover)
+
+    # --- NOVO BOTÃO DE SAÍDA (TELA DE JOGO) ---
+    LARGURA_BTN_SAIDA = 150
+    ALTURA_BTN_SAIDA = 40
+    # Posição no canto inferior esquerdo (ajuste os valores conforme a necessidade)
+    X_SAIDA = 90 
+    Y_SAIDA = ALTURA_TELA - 88 
+
+    # NOVO! Retângulo do botão de saída no tabuleiro
+    botao_sair_jogo = pygame.Rect(X_SAIDA, Y_SAIDA, LARGURA_BTN_SAIDA, ALTURA_BTN_SAIDA)
+
+    botao_em_hover_anterior = None # Rastreia o Rect que estava em hover no frame anterior
     
     # --- Loop Principal do Jogo ---
     while jogo_ativo:
         mouse_pos = pygame.mouse.get_pos()
+        botao_atual_em_hover = None # Rastreia o Rect que está em hover neste frame
         
         # --- Tratamento de Eventos ---
         for evento in pygame.event.get():
@@ -311,7 +314,7 @@ def main():
             if fim_de_jogo or fim_da_rodada:
                 if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                     
-                    # 1. Botão VOLTAR AO MENU 
+                    # 1. Botão VOLTAR AO MENU (Tela Final)
                     if botao_voltar_menu.collidepoint(evento.pos):
                         modo_jogo = menu_inicial.tela_de_menu(
                             tela, LARGURA_TELA, ALTURA_TELA, 
@@ -334,44 +337,50 @@ def main():
                         NUM_LINHAS = config.MAPA_TAMANHOS[config.TAMANHO_TABULEIRO][0] 
                         NUM_COLUNAS = config.MAPA_TAMANHOS[config.TAMANHO_TABULEIRO][1] 
                         total_celulas = NUM_LINHAS * NUM_COLUNAS
-                        tabuleiro_solucao = inicializar_tabuleiro(NUM_LINHAS, NUM_COLUNAS, NUM_TESOUROS, NUM_BURACOS)
+                        num_buracos_rodada = NUM_BURACOS if modo_jogo != menu_inicial.MODO_MORTE_SUBITA else NUM_BURACOS_MORTE
+                        tabuleiro_solucao = inicializar_tabuleiro(NUM_LINHAS, NUM_COLUNAS, NUM_TESOUROS, num_buracos_rodada)
                         # CRIAÇÃO CORRETA DA MATRIZ:
                         tabuleiro_visivel = [[False for _ in range(NUM_COLUNAS)] for _ in range(NUM_LINHAS)]
                         jogador_da_vez = 1
                         
-                    # 2. Botão NOVA RODADA / NOVO JOGO 
+                    # 2. Botão NOVA RODADA / NOVO JOGO (Tela Final)
                     if botao_nova_rodada.collidepoint(evento.pos):
                         
-                        if modo_jogo == menu_inicial.MODO_MELHOR_DE_3 and fim_da_rodada:
+                        if modo_jogo == menu_inicial.MODO_MELHOR_DE_3 and fim_da_rodada and rodada_atual <= RODADAS_TOTAL:
                             # Próxima Rodada (Melhor de 3)
                             
-                            if rodada_atual <= RODADAS_TOTAL: 
-                                # Reset da RODADA 
-                                tabuleiro_solucao = inicializar_tabuleiro(NUM_LINHAS, NUM_COLUNAS, NUM_TESOUROS, NUM_BURACOS)
-                                # CRIAÇÃO CORRETA DA MATRIZ:
-                                tabuleiro_visivel = [[False for _ in range(NUM_COLUNAS)] for _ in range(NUM_LINHAS)] 
-                                celulas_reveladas = 0 
-                                pontos_j1 = 0 
-                                pontos_j2 = 0 
-                                jogador_da_vez = 1
-                                fim_da_rodada = False # Volta para o jogo normal
-                            else:
-                                # Fim de Jogo (Melhor de 3 - tela final)
-                                fim_da_rodada = False
-                                fim_de_jogo = True 
-                                
-                        elif fim_de_jogo: 
-                            # Novo Jogo (Qualquer modo)
+                            # Reset da RODADA 
+                            tabuleiro_solucao = inicializar_tabuleiro(NUM_LINHAS, NUM_COLUNAS, NUM_TESOUROS, NUM_BURACOS)
+                            # CRIAÇÃO CORRETA DA MATRIZ:
+                            tabuleiro_visivel = [[False for _ in range(NUM_COLUNAS)] for _ in range(NUM_LINHAS)] 
+                            celulas_reveladas = 0 
+                            pontos_j1 = 0 
+                            pontos_j2 = 0 
+                            jogador_da_vez = 1
+                            fim_da_rodada = False # Volta para o jogo normal
+                        
+                        elif modo_jogo == menu_inicial.MODO_MELHOR_DE_3 and fim_de_jogo:
+                            # Fim de Jogo (Melhor de 3 - tela final, botão Novo Jogo)
                             pontos_j1 = pontos_j2 = 0
                             celulas_reveladas = 0
                             fim_de_jogo = False
-                            
-                            # Resetar Melhor de 3 (se o modo for o mesmo)
                             vitorias_j1 = vitorias_j2 = 0
                             rodada_atual = 1
                             
                             tabuleiro_solucao = inicializar_tabuleiro(NUM_LINHAS, NUM_COLUNAS, NUM_TESOUROS, NUM_BURACOS)
-                            # CRIAÇÃO CORRETA DA MATRIZ:
+                            tabuleiro_visivel = [[False for _ in range(NUM_COLUNAS)] for _ in range(NUM_LINHAS)]
+                            jogador_da_vez = 1
+
+                        elif fim_de_jogo and modo_jogo != menu_inicial.MODO_MELHOR_DE_3: 
+                            # Novo Jogo (Padrão ou Morte Súbita)
+                            num_buracos_rodada = NUM_BURACOS if modo_jogo != menu_inicial.MODO_MORTE_SUBITA else NUM_BURACOS_MORTE
+                            
+                            pontos_j1 = pontos_j2 = 0
+                            celulas_reveladas = 0
+                            fim_de_jogo = False
+                            rodada_atual = 1
+                            
+                            tabuleiro_solucao = inicializar_tabuleiro(NUM_LINHAS, NUM_COLUNAS, NUM_TESOUROS, num_buracos_rodada)
                             tabuleiro_visivel = [[False for _ in range(NUM_COLUNAS)] for _ in range(NUM_LINHAS)]
                             jogador_da_vez = 1
                 
@@ -380,9 +389,41 @@ def main():
                     continue
 
 
-            # --- Bloco de Clique nas Células do Tabuleiro (Lógica do Jogo) ---
+            # --- LÓGICA DE CLIQUE DO NOVO BOTÃO VOLTAR (Tela de Jogo Ativa) ---
             if not fim_de_jogo and not fim_da_rodada and evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                 mouse_x, mouse_y = evento.pos
+                
+                if botao_sair_jogo.collidepoint((mouse_x, mouse_y)):
+                    modo_jogo = menu_inicial.tela_de_menu(
+                        tela, LARGURA_TELA, ALTURA_TELA, 
+                        fonte_titulo, fonte_botoes, 
+                        IMG_FUNDO_MENU,          
+                        IMG_FUNDO_AJUSTES
+                    )
+                    if modo_jogo is None or modo_jogo == 'sair':
+                        pygame.quit()
+                        return
+                    
+                    # --- CÓDIGO DE RESET COMPLETO ---
+                    pontos_j1 = pontos_j2 = 0
+                    celulas_reveladas = 0
+                    fim_de_jogo = fim_da_rodada = False
+                    vitorias_j1 = vitorias_j2 = 0
+                    rodada_atual = 1
+                    
+                    # Recria o tabuleiro (tamanho pode ter mudado no menu)
+                    NUM_LINHAS = config.MAPA_TAMANHOS[config.TAMANHO_TABULEIRO][0] 
+                    NUM_COLUNAS = config.MAPA_TAMANHOS[config.TAMANHO_TABULEIRO][1] 
+                    total_celulas = NUM_LINHAS * NUM_COLUNAS
+                    NUM_BURACOS_ATUAL = NUM_BURACOS if modo_jogo != menu_inicial.MODO_MORTE_SUBITA else NUM_BURACOS_MORTE
+                    tabuleiro_solucao = inicializar_tabuleiro(NUM_LINHAS, NUM_COLUNAS, NUM_TESOUROS, NUM_BURACOS_ATUAL)
+                    tabuleiro_visivel = [[False for _ in range(NUM_COLUNAS)] for _ in range(NUM_LINHAS)]
+                    jogador_da_vez = 1
+                    
+                    # Pula o restante da lógica de clique para não registrar clique no tabuleiro
+                    continue 
+
+                # --- Bloco de Clique nas Células do Tabuleiro (Lógica do Jogo) ---
                 coluna_clicada = (mouse_x - OFFSET_X) // LADO_CELULA
                 linha_clicada = (mouse_y - OFFSET_Y) // LADO_CELULA
 
@@ -393,7 +434,7 @@ def main():
                     tabuleiro_visivel[linha_clicada][coluna_clicada] = True
                     conteudo = tabuleiro_solucao[linha_clicada][coluna_clicada]
 
-                    # --- LÓGICA DE PONTUAÇÃO ÚNICA ---
+                    # --- LÓGICA DE PONTUAÇÃO E TURNO (PADRÃO / MELHOR DE 3) ---
                     if modo_jogo == menu_inicial.MODO_MELHOR_DE_3 or modo_jogo == menu_inicial.MODO_PADRAO:
                         
                         celulas_reveladas += 1
@@ -411,7 +452,6 @@ def main():
 
                         jogador_da_vez = 2 if jogador_da_vez == 1 else 1
                             
-                            
                         # --- Fim de Rodada/Jogo ---
                         if celulas_reveladas == total_celulas:
                             
@@ -424,7 +464,7 @@ def main():
                                     vitorias_j2 += 1
                                     vencedor = 2
                                 
-                                if rodada_atual < RODADAS_TOTAL:
+                                if rodada_atual < RODADAS_TOTAL and (vitorias_j1 < 2 and vitorias_j2 < 2): # Verifica se já há um vencedor antecipado 2x0 ou 2x1
                                     # É FIM DE RODADA, ATIVA TELA DE TRANSIÇÃO
                                     if vencedor > 0:
                                         mensagem_rodada = f"Rodada {rodada_atual} | Jogador {vencedor} VENCEU!"
@@ -434,7 +474,7 @@ def main():
                                     fim_da_rodada = True
                                     rodada_atual += 1 # Prepara para a próxima rodada
                                 else: 
-                                    # Fim da PARTIDA (Rodada atual é a última)
+                                    # Fim da PARTIDA (Rodada atual é a última ou houve vencedor antecipado)
                                     fim_de_jogo = True
                                     if vitorias_j1 > vitorias_j2:
                                         mensagem_final = f"JOGADOR 1 VENCEU {vitorias_j1}x{vitorias_j2}!"
@@ -444,13 +484,13 @@ def main():
                                         tocar_som(som_vitoria)
                                     else:
                                         mensagem_final = f"EMPATE GERAL! {vitorias_j1}x{vitorias_j2}"
-                            
+                                
                             elif modo_jogo == menu_inicial.MODO_PADRAO:
                                 fim_de_jogo = True
                                 mensagem_final = "EMPATE!"
                                 if pontos_j1 > pontos_j2: 
                                     mensagem_final = "JOGADOR 1 VENCEU!"
-        
+                    
                                 elif pontos_j2 > pontos_j1: 
                                     mensagem_final = "JOGADOR 2 VENCEU!"
                                 tocar_som(som_vitoria)
@@ -461,26 +501,29 @@ def main():
                             # Encontrou Tesouro: Pontua e o turno passa
                             pontos_j1 += 100 if jogador_da_vez == 1 else 0
                             pontos_j2 += 100 if jogador_da_vez == 2 else 0
+                            tocar_som(som_bau)
                             jogador_da_vez = 2 if jogador_da_vez == 1 else 1
 
                         elif conteudo == 'B':
                             # Encontrou Buraco: FIM DE JOGO
+                            tocar_som(som_buraco)
                             fim_de_jogo = True
 
                             # Determina o vencedor pela pontuação
                             mensagem_final = "EMPATE!"
                             if pontos_j1 > pontos_j2: 
                                 mensagem_final = f"JOGADOR 1 VENCEU! (Buraco encontrado por J{jogador_da_vez})"
+                                tocar_som(som_vitoria)
                             elif pontos_j2 > pontos_j1: 
                                 mensagem_final = f"JOGADOR 2 VENCEU! (Buraco encontrado por J{jogador_da_vez})"
+                                tocar_som(som_vitoria)
                             else:
                                 mensagem_final = f"EMPATE! (Buraco encontrado por J{jogador_da_vez})"
-
-                            # Não precisa alternar a vez, o jogo acabou
+                        
                         else: 
                             # Encontrou número ou célula vazia: Turno passa
-                            jogador_da_vez = 2 if jogador_da_vez == 1 else 1
                             tocar_som(som_numero)
+                            jogador_da_vez = 2 if jogador_da_vez == 1 else 1
 
 
         # --- Lógica de Desenho ---
@@ -497,18 +540,42 @@ def main():
         POS_SCORE_J2 = (695, 380) 
         POS_J2_Vez = (660, 105) 
         
-        # O placar exibe a pontuação da rodada atual (pontos_j1/j2)
+        # Placar exibe a pontuação da rodada atual
         desenhar_texto_centralizado(tela, f"{pontos_j1} PTS", fonte_placar, cores.preto, POS_SCORE_J1[0], POS_SCORE_J1[1])
         desenhar_texto_centralizado(tela, f"{pontos_j2} PTS", fonte_placar, cores.preto, POS_SCORE_J2[0], POS_SCORE_J2[1])
 
-        # Desenha o Indicador de Vez (oculta se o jogo/rodada estiver parado)
+        # Indicador de Vez
         cor_j1 = VERDE_DESTAQUE if jogador_da_vez == 1 and not (fim_de_jogo or fim_da_rodada) else cores.preto
         cor_j2 = VERDE_DESTAQUE if jogador_da_vez == 2 and not (fim_de_jogo or fim_da_rodada) else cores.preto
 
-        desenhar_texto_centralizado(tela, "Play 1", fonte_botoes, cor_j1, POS_J1_Vez[0], POS_J1_Vez[1])
-        desenhar_texto_centralizado(tela, "Play 2", fonte_botoes, cor_j2, POS_J2_Vez[0], POS_J2_Vez[1])
+        desenhar_texto_centralizado(tela, "Jogador  1", fonte_botoes, cor_j1, POS_J1_Vez[0], POS_J1_Vez[1])
+        desenhar_texto_centralizado(tela, "Jogador 2", fonte_botoes, cor_j2, POS_J2_Vez[0], POS_J2_Vez[1])
 
-        # --- 3. Desenho das Telas de Transição / Fim ---
+        # --- 3. Desenho do Botão "Voltar ao Menu" no Tabuleiro (APENAS se o jogo estiver ativo) ---
+        if not fim_de_jogo and not fim_da_rodada:
+            
+            # Verifica o hover
+            cor_btn_saida = VERDE_DESTAQUE if botao_sair_jogo.collidepoint(mouse_pos) else cores.preto
+            
+            # Desenha o texto do botão
+            desenhar_texto_centralizado(
+                tela, "Voltar ao Menu", fonte_botoes, cor_btn_saida, 
+                botao_sair_jogo.centerx, botao_sair_jogo.centery
+            )
+
+            # LÓGICA DE SOM DE HOVER DO BOTÃO DE SAÍDA (Apenas se o jogo não estiver no fim/transição)
+            if botao_sair_jogo.collidepoint(mouse_pos):
+                botao_atual_em_hover = botao_sair_jogo
+
+            if config.SOM_LIGADO and menu_inicial.SOM_BOTAO_HOVER is not None:
+                if botao_atual_em_hover is not None and botao_atual_em_hover != botao_em_hover_anterior:
+                    menu_inicial.SOM_BOTAO_HOVER.play()
+
+            # Se o mouse sair do botão e entrar na área de jogo, deve limpar o hover
+            botao_em_hover_anterior = botao_atual_em_hover
+        
+        
+        # --- 4. Desenho das Telas de Transição / Fim ---
         if fim_de_jogo or fim_da_rodada:
             
             mensagem_a_exibir = mensagem_rodada if fim_da_rodada else mensagem_final
@@ -534,6 +601,28 @@ def main():
                 VERDE_DESTAQUE,
                 cores.preto # Cor normal dos botões
             )
+
+            # LÓGICA DE RASTREAMENTO DE HOVER E SOM (dentro do if fim_de_jogo/fim_da_rodada)
+            
+            # Verifica o hover nos botões de fim de jogo/rodada
+            if botao_nova_rodada.collidepoint(mouse_pos):
+                botao_atual_em_hover = botao_nova_rodada
+            elif botao_voltar_menu.collidepoint(mouse_pos):
+                botao_atual_em_hover = botao_voltar_menu
+
+            # Toca o som se a opção estiver ligada e o mouse acabou de entrar em um novo botão
+            if config.SOM_LIGADO and menu_inicial.SOM_BOTAO_HOVER is not None:
+                if botao_atual_em_hover is not None and botao_atual_em_hover != botao_em_hover_anterior:
+                    menu_inicial.SOM_BOTAO_HOVER.play()
+
+            # ATUALIZA o estado de hover para o próximo loop (Apenas se estiver na tela final)
+            botao_em_hover_anterior = botao_atual_em_hover
+        
+        
+        # Garantindo que o estado de hover anterior seja reiniciado se o jogo for ativo
+        # O estado de hover_anterior foi atualizado no bloco do botão de saída, então este 'else' não é mais necessário aqui
+        # if not (fim_de_jogo or fim_da_rodada):
+        #     botao_em_hover_anterior = None
 
 
         pygame.display.update()
