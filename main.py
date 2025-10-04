@@ -145,6 +145,31 @@ def main():
     # --- 1. Inicialização da Tela ---
     tela = pygame.display.set_mode((LARGURA_TELA, ALTURA_TELA))
     pygame.display.set_caption("Caça ao Tesouro")
+
+    # --- Carregando sons
+    som_bau = None
+    som_buraco = None
+    som_numero = None
+    som_vitoria = None
+
+    try:
+        som_bau = pygame.mixer.Sound('recursos/som_bau.wav')
+        som_buraco = pygame.mixer.Sound('recursos/som_buraco.wav')
+        som_numero = pygame.mixer.Sound('recursos/som_numero.wav')
+        som_vitoria = pygame.mixer.Sound('recursos/som_vitoria.wav')
+    except (FileNotFoundError, pygame.error) as e:
+        print(f"Erro ao carregar um arquivo de som: {e}. O jogo continuará sem som.")
+        # Se um som não carregar, o jogo não vai quebrar.
+
+        
+    # --- Função Auxiliar para Tocar Som --- # <<< NOVA FUNÇÃO INTERNA >>>
+    def tocar_som(som):
+        """
+        Toca um som somente se a opção de som estiver ligada no config
+        e se o arquivo de som foi carregado com sucesso.
+        """
+        if config.SOM_LIGADO and som: # Verifica se a variável de som está ligada E se o som existe
+            som.play()
     
     # --- 2. Carregamento de Fontes ---
     CAMINHO_FONTE = 'recursos/stitch.ttf' 
@@ -376,12 +401,17 @@ def main():
                         if conteudo == 'T':
                             pontos_j1 += 100 if jogador_da_vez == 1 else 0
                             pontos_j2 += 100 if jogador_da_vez == 2 else 0
+                            tocar_som(som_bau)
                         elif conteudo == 'B':
                             pontos_j1 = max(0, pontos_j1 - 50) if jogador_da_vez == 1 else pontos_j1
                             pontos_j2 = max(0, pontos_j2 - 50) if jogador_da_vez == 2 else pontos_j2
-                            
-                        jogador_da_vez = 2 if jogador_da_vez == 1 else 1
+                            tocar_som(som_buraco)
+                        else:
+                            tocar_som(som_numero)
 
+                        jogador_da_vez = 2 if jogador_da_vez == 1 else 1
+                            
+                            
                         # --- Fim de Rodada/Jogo ---
                         if celulas_reveladas == total_celulas:
                             
@@ -408,16 +438,22 @@ def main():
                                     fim_de_jogo = True
                                     if vitorias_j1 > vitorias_j2:
                                         mensagem_final = f"JOGADOR 1 VENCEU {vitorias_j1}x{vitorias_j2}!"
+                                        tocar_som(som_vitoria)
                                     elif vitorias_j2 > vitorias_j1:
                                         mensagem_final = f"JOGADOR 2 VENCEU {vitorias_j2}x{vitorias_j1}!"
+                                        tocar_som(som_vitoria)
                                     else:
                                         mensagem_final = f"EMPATE GERAL! {vitorias_j1}x{vitorias_j2}"
                             
                             elif modo_jogo == menu_inicial.MODO_PADRAO:
                                 fim_de_jogo = True
                                 mensagem_final = "EMPATE!"
-                                if pontos_j1 > pontos_j2: mensagem_final = "JOGADOR 1 VENCEU!"
-                                elif pontos_j2 > pontos_j1: mensagem_final = "JOGADOR 2 VENCEU!"
+                                if pontos_j1 > pontos_j2: 
+                                    mensagem_final = "JOGADOR 1 VENCEU!"
+        
+                                elif pontos_j2 > pontos_j1: 
+                                    mensagem_final = "JOGADOR 2 VENCEU!"
+                                tocar_som(som_vitoria)
                                 
                     # --- LÓGICA DO MODO MORTE SÚBITA ---
                     elif modo_jogo == menu_inicial.MODO_MORTE_SUBITA:
@@ -444,6 +480,7 @@ def main():
                         else: 
                             # Encontrou número ou célula vazia: Turno passa
                             jogador_da_vez = 2 if jogador_da_vez == 1 else 1
+                            tocar_som(som_numero)
 
 
         # --- Lógica de Desenho ---
